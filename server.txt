@@ -1,0 +1,58 @@
+import socket
+import json
+from PIL import ImageGrab  # For taking screenshots
+
+def start_server():
+    # Server setup
+    host = '0.0.0.0'  # Listen on all available network interfaces
+    port = 80         # Port to listen on
+
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server_socket.bind((host, port))
+    server_socket.listen(5)  # Allow up to 5 connections
+    print(f"Server is listening on port {port}...")
+
+    while True:
+        client_socket, client_address = server_socket.accept()
+        print(f"Connection established with {client_address}")
+
+        try:
+            # Receive data from the client
+            data = client_socket.recv(1024).decode('utf-8')
+            if data:
+                print(f"Received command: {data}")
+                command = json.loads(data)  # Parse JSON command
+
+                # Check for exit command
+                if command.get("action") == "exit":
+                    print("Shutting down the server...")
+                    server_socket.close()
+                    break
+
+                # Handle the "take_screenshot" command
+                if command.get("action") == "take_screenshot":
+                    screenshot_path = take_screenshot()
+                    response = {"status": "success", "file": screenshot_path}
+                else:
+                    response = {"status": "error", "message": "Invalid command"}
+
+                # Send response to the client
+                client_socket.send(json.dumps(response).encode('utf-8'))
+
+        except Exception as e:
+            print(f"Error: {e}")
+            client_socket.send(json.dumps({"status": "error", "message": str(e)}).encode('utf-8'))
+
+        finally:
+            client_socket.close()
+
+def take_screenshot():
+    # Capture the screen using PIL (Pillow)
+    screenshot = ImageGrab.grab()
+    file_path = "screenshot.png"
+    screenshot.save(file_path)
+    print(f"Screenshot saved to {file_path}")
+    return file_path
+
+if __name__ == "__main__":
+    start_server()

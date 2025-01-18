@@ -1,0 +1,47 @@
+import socket
+import json
+
+def send_command_to_server(server_ip, port, command):
+    try:
+        # Create a socket to connect to the server
+        client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        client_socket.connect((server_ip, port))
+
+        # Send the command to the server
+        client_socket.send(json.dumps(command).encode('utf-8'))
+
+        # Receive the server's response
+        response = client_socket.recv(1024).decode('utf-8')
+        print(f"Server Response: {response}")
+
+        # Close the connection
+        client_socket.close()
+    except Exception as e:
+        print(f"Error: {e}")
+
+if __name__ == "__main__":
+    # Define server details
+    server_ip = "192.168.56.102"  # Updated to the server VM's IP address
+    port = 80
+
+    # Main interaction loop
+    while True:
+        print("\nAvailable Commands:")
+        print("1. take_screenshot - Take a screenshot on the server")
+        print("2. exit - Stop the server")
+        print("3. quit - Exit this client program")
+        user_input = input("Enter your command: ").strip().lower()
+
+        if user_input == "take_screenshot":
+            command = {"action": "take_screenshot"}
+            send_command_to_server(server_ip, port, command)
+        elif user_input == "exit":
+            command = {"action": "exit"}
+            send_command_to_server(server_ip, port, command)
+            print("Exiting client program...")
+            break
+        elif user_input == "quit":
+            print("Exiting client program...")
+            break
+        else:
+            print("Invalid command. Please try again.")

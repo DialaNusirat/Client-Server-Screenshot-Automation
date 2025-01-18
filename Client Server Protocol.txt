@@ -1,0 +1,79 @@
+"Client Server Protocol"
+import socket
+import os
+import json
+from PIL import ImageGrab
+
+# Server code
+def start_server():
+    host = '0.0.0.0'
+    port = 80
+
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server_socket.bind((host, port))
+    server_socket.listen(5)
+
+    print(f"Server is listening on port {port}...")
+
+    while True:
+        client_socket, client_address = server_socket.accept()
+        print(f"Connection established with {client_address}")
+
+        try:
+            data = client_socket.recv(1024).decode('utf-8')
+            if data:
+                print(f"Received command: {data}")
+
+                # Parse the command
+                command = json.loads(data)
+                if command.get("action") == "take_screenshot":
+                    screenshot_path = take_screenshot()
+                    response = {"status": "success", "file": screenshot_path}
+                else:
+                    response = {"status": "error", "message": "Invalid command"}
+
+                client_socket.send(json.dumps(response).encode('utf-8'))
+        except Exception as e:
+            print(f"Error: {e}")
+            client_socket.send(json.dumps({"status": "error", "message": str(e)}).encode('utf-8'))
+        finally:
+            client_socket.close()
+
+
+def take_screenshot():
+    screenshot = ImageGrab.grab()
+    file_path = os.path.join(os.getcwd(), "screenshot.png")
+    screenshot.save(file_path)
+    print(f"Screenshot saved to {file_path}")
+    return file_path
+
+
+# Client code
+def start_client(server_ip):
+    host = server_ip
+    port = 80
+
+    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    client_socket.connect((host, port))
+
+    # Send command to the server
+    command = {"action": "take_screenshot"}
+    client_socket.send(json.dumps(command).encode('utf-8'))
+
+    # Receive response from the server
+    response = client_socket.recv(1024).decode('utf-8')
+    print(f"Response from server: {response}")
+
+    client_socket.close()
+
+
+if __name__ == "__main__":
+    choice = input("Run as server or client? (s/c): ").strip().lower()
+
+    if choice == 's':
+        start_server()
+    elif choice == 'c':
+        server_ip = input("Enter server IP: ").strip()
+        start_client(server_ip)
+    else:
+        print("Invalid choice. Exiting.")
